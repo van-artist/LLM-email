@@ -1,5 +1,5 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from config import MODEL_CONFIG
+from config import MODEL_CONFIG,PROPMPTS
 
 class LlamaModel:
     def __init__(self):
@@ -17,6 +17,11 @@ class LlamaModel:
 
     def generate_reply(self, prompt: str) -> str:
         """根据提示生成自动回复文本"""
+        pre_prompt = ""
+        for propmt in PROPMPTS:
+            pre_prompt += propmt
+        # 将提示词与用户输入拼接
+        full_prompt = f"{pre_prompt} {prompt}"
         inputs = self.tokenizer(prompt, return_tensors="pt", max_length=MODEL_CONFIG['max_length'], truncation=True)
         outputs = self.model.generate(**inputs, max_length=MODEL_CONFIG['max_length'], temperature=MODEL_CONFIG['temperature'])
         reply = self.tokenizer.decode(outputs[0], skip_special_tokens=True)

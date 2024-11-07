@@ -9,6 +9,11 @@ class MongoDBClient:
         self.db = self.client[db_name]
         self.collection = self.db[collection_name]
 
+    def __enter__(self):
+        return self
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.client.close()
+        
     def validate_student_data(self, student_data: dict):
         """
         验证学生数据的约束。
