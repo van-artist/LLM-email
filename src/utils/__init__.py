@@ -1,0 +1,1 @@
+from .validater import validate_json
