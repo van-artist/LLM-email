@@ -1,7 +1,6 @@
 from jsonschema import validate, ValidationError
 
-# 定义 JSON schema
-schema = {
+student_email_schema = {
     "type": "object",
     "properties": {
         "subject": {"type": "string"},
@@ -53,10 +52,9 @@ schema = {
     "required": ["subject", "sender", "application_intent", "background", "reason_for_applying", "request", "closing"]
 }
 
-# 验证 JSON 输出
-def validate_json(output_json):
+def validate_student_email(output_json):
     try:
-        validate(instance=output_json, schema=schema)
+        validate(instance=output_json, schema=student_email_schema)
         return True
     except ValidationError as e:
         print("JSON格式不符合要求:", e)

@@ -1,1 +1,1 @@
-from .validater import validate_json
+from .validater import validate_student_email

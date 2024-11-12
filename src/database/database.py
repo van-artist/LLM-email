@@ -1,77 +1,105 @@
-import re
-from pymongo import MongoClient
-from config import MONGGODB_URL
-from datetime import datetime
+import json
+import os
+import threading
+import uuid
+from config import DATA_DIR
+from .schemas.student_email import create_student_email_from_json, StudentEmail_to_dict
 
-class MongoDBClient:
-    def __init__(self, db_name: str, collection_name: str):
-        self.client = MongoClient(MONGGODB_URL)
-        self.db = self.client[db_name]
-        self.collection = self.db[collection_name]
+class StudentEmailDatabaseClient:
+    def __init__(self):
+        self.data_path = os.path.join(DATA_DIR, "db/db.json")
+        self.lock = threading.Lock()
 
-    def __enter__(self):
-        return self
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.client.close()
-        
-    def validate_student_data(self, student_data: dict):
-        """
-        验证学生数据的约束。
-        """
-        # 验证姓名
-        if 'name' not in student_data or not isinstance(student_data['name'], str) or len(student_data['name']) == 0:
-            raise ValueError("学生姓名必须是非空字符串")
+        # 初始化数据库文件
+        if not os.path.exists(self.data_path):
+            with open(self.data_path, "w", encoding="utf-8") as file:
+                json.dump({"student_emails": []}, file)
 
-        # 验证邮箱格式
-        if 'email' not in student_data or not re.match(r"[^@]+@[^@]+\.[^@]+", student_data['email']):
-            raise ValueError("无效的电子邮件地址")
+    # 加载数据
+    def load_data(self):
+        if os.path.exists(self.data_path):
+            with open(self.data_path, "r", encoding="utf-8") as file:
+                return json.load(file)
+        return {"student_emails": []}
 
-        # 验证电话号码（可选）
-        if 'phone' in student_data and not re.match(r"^\+?\d{7,15}$", student_data['phone']):
-            raise ValueError("无效的电话号码")
+    # 保存数据
+    def save_data(self, data):
+        with self.lock:
+            with open(self.data_path, "w", encoding="utf-8") as file:
+                json.dump(data, file, indent=4, ensure_ascii=False)
 
-        # 验证学校
-        if 'school' not in student_data or not isinstance(student_data['school'], str) or len(student_data['school']) == 0:
-            raise ValueError("学校名称必须是非空字符串")
+    # 插入新邮件，并生成唯一 ID
+    def insert_student_email(self, json_data: str):
+        student_email = create_student_email_from_json(json_data)
+        if student_email is None:
+            print("数据验证失败，无法插入。")
+            return
 
-        # 验证本科专业
-        if 'major' not in student_data or not isinstance(student_data['major'], str) or len(student_data['major']) == 0:
-            raise ValueError("专业名称必须是非空字符串")
+        data = self.load_data()
+        student_email_dict = StudentEmail_to_dict(student_email)
+        student_email_dict["id"] = str(uuid.uuid4())  # 生成唯一 ID
 
-        # 验证申请的硕士课程/项目
-        if 'intended_program' not in student_data or not isinstance(student_data['intended_program'], str) or len(student_data['intended_program']) == 0:
-            raise ValueError("申请的硕士课程必须是非空字符串")
+        data["student_emails"].append(student_email_dict)
+        self.save_data(data)
+        print("插入成功！")
+        return student_email_dict["id"]
 
-        # 验证需求类型
-        if 'query_type' not in student_data or not isinstance(student_data['query_type'], str) or len(student_data['query_type']) == 0:
-            raise ValueError("需求类型必须是非空字符串")
+    # 获取所有邮件
+    def get_all_student_emails(self):
+        data = self.load_data()
+        return data.get("student_emails", [])
 
-        # 验证疑问详情
-        if 'query_details' not in student_data or not isinstance(student_data['query_details'], str) or len(student_data['query_details']) == 0:
-            raise ValueError("疑问详情必须是非空字符串")
+    # 根据索引获取特定邮件
+    def get_student_email(self, index: int):
+        data = self.load_data()
+        try:
+            return data["student_emails"][index]
+        except IndexError:
+            print(f"索引 {index} 超出范围")
+            return None
 
-    def insert_student(self, student_data: dict):
-        """
-        向 'student' 集合插入一条学生信息记录。
-        :param student_data: 学生数据字典
-        :return: 插入记录的ID
-        """
-        # 插入之前验证数据
-        self.validate_student_data(student_data)
-        
-        # 插入当前日期
-        student_data['created_at'] = datetime.now()
-        
-        # 插入数据到集合
-        result = self.collection.insert_one(student_data)
-        return result.inserted_id
+    # 根据 ID 获取特定邮件
+    def get_student_email_by_id(self, email_id: str):
+        data = self.load_data()
+        for email in data["student_emails"]:
+            if email.get("id") == email_id:
+                return email
+        print(f"未找到 ID 为 {email_id} 的邮件")
+        return None
 
-    def find_student(self, query: dict):
-        """
-        根据查询条件查找 'student' 集合中的学生记录。
-        :param query: 查询条件
-        :return: 查找到的学生记录
-        """
-        return self.collection.find_one(query)
+    # 更新邮件
+    def update_student_email(self, email_id: str, json_data: str):
+        student_email = create_student_email_from_json(json_data)
+        if student_email is None:
+            print("数据验证失败，无法更新。")
+            return
 
+        data = self.load_data()
+        updated = False
+        for index, email in enumerate(data["student_emails"]):
+            if email.get("id") == email_id:
+                student_email_dict = StudentEmail_to_dict(student_email)
+                student_email_dict["id"] = email_id  # 保留原来的 ID
+                data["student_emails"][index] = student_email_dict
+                updated = True
+                break
 
+        if updated:
+            self.save_data(data)
+            print("更新成功！")
+        else:
+            print(f"未找到 ID 为 {email_id} 的邮件，无法更新。")
+
+    # 删除特定 ID 的邮件
+    def delete_student_email(self, email_id: str):
+        data = self.load_data()
+        for index, email in enumerate(data["student_emails"]):
+            if email.get("id") == email_id:
+                deleted_email = data["student_emails"].pop(index)
+                self.save_data(data)
+                print(f"删除成功！已删除: {deleted_email}")
+                return
+        print(f"未找到 ID 为 {email_id} 的邮件，无法删除。")
+
+# 实例化数据库客户端
+student_email_data_client = StudentEmailDatabaseClient()
