@@ -1,8 +1,10 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass,field,asdict
 from typing import List
 from utils import validate_student_email
 import json
 from jsonschema import ValidationError
+import uuid
+
 
 @dataclass
 class Sender:
@@ -33,6 +35,7 @@ class Request:
 
 @dataclass
 class StudentEmail:
+    id: str 
     subject: str
     sender: Sender
     application_intent: ApplicationIntent
@@ -96,3 +99,4 @@ def StudentEmail_to_dict(student_email):
         },
         "closing": student_email.closing
     }
+

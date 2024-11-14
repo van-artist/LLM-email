@@ -18,7 +18,10 @@ student_email_schema = {
             "type": "object",
             "properties": {
                 "program": {"type": "string"},
-                "interests": {"type": "array", "items": {"type": "string"}}
+                "interests": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                }
             },
             "required": ["program", "interests"]
         },
@@ -36,26 +39,29 @@ student_email_schema = {
                         "required": ["title", "results"]
                     }
                 },
-                "courses": {"type": "array", "items": {"type": "string"}}
-            }
+                "courses": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                }
+            },
+            "required": ["projects", "courses"]
         },
-        "reason_for_applying": {"type": "string"},
         "request": {
             "type": "object",
             "properties": {
                 "type": {"type": "string"},
                 "appreciation": {"type": "string"}
-            }
-        },
-        "closing": {"type": "string"}
+            },
+            "required": ["type", "appreciation"]
+        }
     },
-    "required": ["subject", "sender", "application_intent", "background", "reason_for_applying", "request", "closing"]
+    "required": ["subject", "sender", "application_intent", "background", "request"]
 }
 
-def validate_student_email(output_json):
+
+def validate_student_email(data):
     try:
-        validate(instance=output_json, schema=student_email_schema)
-        return True
+        validate(instance=data, schema=student_email_schema)
+        print("Validation successful!")
     except ValidationError as e:
-        print("JSON格式不符合要求:", e)
-        return False
+        print(f"Validation error: {e.message}")

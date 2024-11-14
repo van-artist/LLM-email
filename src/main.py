@@ -1,37 +1,65 @@
 import os
 import re
-import time 
-from core.model import reader_model,writer_model
+from dataclasses import asdict
 from config import DATA_DIR
-from utils import validate_student_email
-from database.database import student_email_data_client
-import json
+from database.schemas.student_email import StudentEmail
+from database.database import student_email_data_client, student_data_client, email_to_student
+from core.model import writer_model, reader_model
+
+
+def read_email_from_file(file_path: str) -> str:
+    """Reads the email content from a file."""
+    try:
+        with open(file_path, "r", encoding="utf-8") as file:
+            return file.read()
+    except Exception as e:
+        print(f"Error reading file {file_path}: {e}")
+        raise
+
+
+def generate_email_reply(example_email: str) -> str:
+    """Generates a reply to the email using the reader model."""
+    reply = reader_model.generate_reply(example_email)
+    # Remove markdown JSON syntax
+    return re.sub(r"```json|```", "", reply).strip()
+
+
+def process_student_email(email_json: str) -> int:
+    """Processes the email into the student database."""
+    email_id = student_email_data_client.insert_from_json(email_json)
+    email_dict = student_email_data_client.find(email_id)
+    student_email = StudentEmail(**email_dict)
+    student_dict = asdict(email_to_student(student_email))
+    return student_data_client.insert(student_dict)
+
+
+def generate_writer_reply(student_data: str) -> str:
+    """Generates a writer's reply based on the student's data."""
+    return writer_model.generate_reply(student_data)
+
 
 def main():
     email_path = os.path.join(DATA_DIR, "mails/example.txt")
-    reply_path= os.path.join(DATA_DIR,"replys/output.txt")
-    info_path=os.path.join(DATA_DIR,f"jsons/output-{time.time()}.json")
 
-    with open(email_path, "r", encoding="utf-8") as file:
-        example_email = file.read()
-    reader_reply = reader_model.generate_reply(example_email)
-    reader_reply = re.sub(r"```json|```", "", reader_reply).strip()
+    try:
+        # Step 1: Read the email content
+        example_email = read_email_from_file(email_path)
 
-    with open(info_path,"w",encoding="utf-8") as file:
-        validate_result=validate_student_email(json.loads(reader_reply))
-        print("validate_result:",validate_result)
-        file.write(reader_reply)
+        # Step 2: Generate a reply from the reader model
+        reader_reply = generate_email_reply(example_email)
 
-    current_student_id=student_email_data_client.insert_student_email(reader_reply)
-    current_student_email_json:dict=student_email_data_client.get_student_email_by_id(current_student_id)
-    current_student_email_str = json.dumps(current_student_email_json, ensure_ascii=False, indent=4)
-    writer_reply=writer_model.generate_reply(current_student_email_str)
-    
-    with open(reply_path,'w',encoding="utf-8") as file:
-        file.write(writer_reply)
-    print("回复内容：")
-    print(writer_reply)
-    
+        # Step 3: Process the email and insert student data
+        new_student_id = process_student_email(reader_reply)
+        print(f"New student ID: {new_student_id}")
+
+        # Step 4: Retrieve student data and generate writer's reply
+        student_data = student_data_client.find(new_student_id)
+        writer_reply = generate_writer_reply(str(student_data))
+
+        print(writer_reply)
+    except Exception as e:
+        print(f"Error in processing: {e}")
+
 
 if __name__ == "__main__":
     main()
