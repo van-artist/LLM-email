@@ -1,3 +1,4 @@
+from curses import raw
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
 import json
@@ -37,6 +38,7 @@ class Request:
 class StudentEmail:
     id: str
     subject: str
+    raw_mail_path: str
     sender: Sender
     application_intent: ApplicationIntent
     background: Background

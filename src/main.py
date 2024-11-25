@@ -1,5 +1,7 @@
+import email
 import os
 import re
+import time 
 from dataclasses import asdict
 from typing import Dict, Any
 from typing_extensions import final
@@ -9,12 +11,31 @@ from controller.data_manager import student_email_data_client, student_data_clie
 from controller.shared_pool import shared_message_pool
 from models import writer_model, reader_model, checker_mddel
 
+
+
+def save_raw_mail(email: str)->str:
+    """保存原始邮件内容"""
+    # 文件名打上时间戳
+    file_name = f"mail_{int(time.time())}.txt"
+    file_path = os.path.join(DATA_DIR, "mails",file_name)
+    try:
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write(email)
+        print(f"Raw email saved to {file_path}")
+        return file_path
+    except Exception as e:
+        print(f"Error saving raw email: {e}")
+        return ""
+
 def read_email_from_file(file_path: str) -> str:
     """Reads the email content from a file."""
     try:
+        
         with open(file_path, "r", encoding="utf-8") as file: 
             print("Step 1: Email content successfully read from file.")
-            return file.read()
+            mail_content = file.read()
+            shared_message_pool.add('raw_mail', mail_content)
+            return mail_content 
     except Exception as e:
         print(f"Error reading file {file_path}: {e}")
         raise
@@ -33,6 +54,7 @@ def process_student_email() -> Dict[str, Any]:
     new_student = shared_message_pool.get('reader_reply')
     email_id = student_email_data_client.insert_from_json(new_student)
     email_dict = student_email_data_client.find(email_id)
+    email_dict['raw_mail_path'] = save_raw_mail(shared_message_pool.get('raw_mail'))
     student_email = StudentEmail(**email_dict)
     student_dict = asdict(email_to_student(student_email))
     student_data_client.insert(student_dict)
@@ -99,7 +121,7 @@ def generate_checker_reply() -> str:
     return checker_reply
 
 def main():
-    email_path = os.path.join(DATA_DIR, "mails/example.txt")
+    email_path = os.path.join(DATA_DIR, "example.txt")
     max_iterations = 5
     iteration = 0
     reference = reference_data_client.find_all()
@@ -109,38 +131,36 @@ def main():
     
     final_reply = ""
     print(reference)
-    
-    while iteration < max_iterations:
-        try:
-            iteration += 1
-            print(f"--- Iteration {iteration} ---")
+    # 读取邮件内容并存入共享池
+    raw_mail = read_email_from_file(email_path)
+    shared_message_pool.add('original_email', raw_mail)
 
-            # 读取邮件内容并存入共享池
-            example_email = read_email_from_file(email_path)
-            shared_message_pool.add('original_email', example_email)
+    # 使用 Reader 模型生成回复
+    reader_reply = generate_reader_reply()
+    shared_message_pool.add('reader_reply', reader_reply)
 
-            # 使用 Reader 模型生成回复
-            reader_reply = generate_reader_reply()
-            shared_message_pool.add('reader_reply', reader_reply)
+    # 处理邮件并存入学生数据库
+    student_data = process_student_email()
+    shared_message_pool.add('student_data', student_data)
+    # while iteration < max_iterations:
+    #     try:
+    #         iteration += 1
+    #         print(f"--- Iteration {iteration} ---")
 
-            # 处理邮件并存入学生数据库
-            student_data = process_student_email()
-            shared_message_pool.add('student_data', student_data)
+    #         # 使用 Writer 模型生成草稿，结合学生信息和检查者建议
+    #         tmp_reply = generate_writer_reply(iteration == 1)
+    #         shared_message_pool.add('tmp_reply', tmp_reply)
+    #         print(f"Writer reply: {tmp_reply}")
+    #         final_reply = tmp_reply
 
-            # 使用 Writer 模型生成草稿，结合学生信息和检查者建议
-            tmp_reply = generate_writer_reply(iteration == 1)
-            shared_message_pool.add('tmp_reply', tmp_reply)
-            print(f"Writer reply: {tmp_reply}")
-            final_reply = tmp_reply
+    #         # Step 5: 使用 Checker 模型检查最终草稿
+    #         checker_reply = generate_checker_reply()
+    #         shared_message_pool.add('checker_reply', checker_reply)
+    #         print(f"Checker reply: {checker_reply}")
 
-            # Step 5: 使用 Checker 模型检查最终草稿
-            checker_reply = generate_checker_reply()
-            shared_message_pool.add('checker_reply', checker_reply)
-            print(f"Checker reply: {checker_reply}")
-
-        except Exception as e:
-            print(f"Error in processing: {e}")
-            break
+    #     except Exception as e:
+    #         print(f"Error in processing: {e}")
+    #         break
 
     print("Max iterations reached. Exiting...")
 
