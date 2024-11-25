@@ -1,10 +1,5 @@
-from curses import raw
 from dataclasses import dataclass, field
-from typing import List, Dict, Any
-import json
-import uuid
-import os
-import threading
+from typing import List
 
 # 优化后的数据模型
 @dataclass
@@ -35,6 +30,11 @@ class Request:
     appreciation: str
 
 @dataclass
+class ExtraInfo:
+    key: str
+    value: str
+
+@dataclass
 class StudentEmail:
     id: str
     subject: str
@@ -45,3 +45,4 @@ class StudentEmail:
     reason_for_applying: str
     request: Request
     closing: str
+    extra_info: List[ExtraInfo] = field(default_factory=list) 

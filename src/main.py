@@ -6,8 +6,8 @@ from dataclasses import asdict
 from typing import Dict, Any
 from typing_extensions import final
 from config import DATA_DIR
-from controller.schemas.student_email import StudentEmail
-from controller.data_manager import student_email_data_client, student_data_client, reference_data_client , email_to_student
+from controller.schemas.email import StudentEmail
+from controller.data_manager import email_data_client, student_data_client, reference_data_client ,email_to_student
 from controller.shared_pool import shared_message_pool
 from models import writer_model, reader_model, checker_mddel
 
@@ -52,8 +52,8 @@ def process_student_email() -> Dict[str, Any]:
     """Processes the email into the student database and returns the student data."""
     print("Step 3: Processing student email and storing into database...")
     new_student = shared_message_pool.get('reader_reply')
-    email_id = student_email_data_client.insert_from_json(new_student)
-    email_dict = student_email_data_client.find(email_id)
+    email_id = email_data_client.insert_from_json_string(new_student)
+    email_dict = email_data_client.find(email_id)
     email_dict['raw_mail_path'] = save_raw_mail(shared_message_pool.get('raw_mail'))
     student_email = StudentEmail(**email_dict)
     student_dict = asdict(email_to_student(student_email))

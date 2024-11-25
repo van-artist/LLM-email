@@ -1,18 +1,18 @@
 import json
 import os
-from typing import List, Dict, Any
-import uuid
-from config import DATA_DIR
-from controller.schemas.student import Request, ApplicationIntent, Background
-from controller.schemas.student import Student
-from controller.schemas.student_email import StudentEmail
+import datetime
 import copy
-import logging
+import uuid
+from typing import List, Dict, Any, Optional
+from dataclasses import asdict
+from controller.schemas.student import Student
+from controller.schemas.email import StudentEmail
+from config import ROLES_WRITER,ROLES_STUDENT,DATA_DIR
 
 class DataClient:
-    def __init__(self, data_type: str, readonly: bool = False):
+    def __init__(self, data_type: str, readonly: bool = False,output_dir:str="json"):
         self.data_type = data_type
-        self.data_file = os.path.join(DATA_DIR, f"json/{data_type}.json")
+        self.data_file = os.path.join(DATA_DIR,output_dir, f"{data_type}.json")
         self.readonly = readonly
         self.data = self._load_data()
 
@@ -41,30 +41,16 @@ class DataClient:
         self.data.append(new_data)
         self._save_data()
         return new_data["id"]
-
-    def insert_from_json(self, json_string: str) -> str:
-        """接受 JSON 字符串并插入数据"""
-        try:
-            data = json.loads(json_string)
-            if isinstance(data, dict):  # 如果是单条数据，插入一条记录
-                return self.insert(data)
-            elif isinstance(data, list):  # 如果是多条数据，逐条插入
-                for record in data:
-                    self.insert(record)
-                return str(len(data))  # 返回插入的记录数
-            else:
-                raise ValueError("JSON 格式不符合预期")
-        except json.JSONDecodeError as e:
-            logging.error(f"JSON 解码错误: {e}")
-            return "-1"
-        except ValueError as e:
-            logging.error(f"数据格式错误: {e}")
-            return "-1"
+    
+    def insert_from_json_string(self, json_string: str) -> str:
+        """从 JSON 字符串插入数据"""
+        data = json.loads(json_string)
+        return self.insert(data)
 
     def find(self, record_id: str) -> Dict[str, Any]:
         """根据 ID 查找记录"""
         return next((record for record in self.data if record.get("id") == record_id), {})
-
+    
     def update(self, record_id: str, new_data: Dict[str, Any]) -> bool:
         """根据 ID 更新记录"""
         for record in self.data:
@@ -86,8 +72,90 @@ class DataClient:
     def find_all(self) -> List[Dict[str, Any]]:
         """返回所有记录"""
         return self.data
+class StudentDataClient(DataClient):
+    def __init__(self):
+        super().__init__("student")
 
-        
+    def find_by_university(self, university: str) -> List[Dict[str, Any]]:
+        """根据大学查找学生"""
+        return [record for record in self.data if record.get("university") == university]
+
+    def find_by_name(self, name: str) -> List[Dict[str, Any]]:
+        """根据姓名查找学生"""
+        return [record for record in self.data if record.get("name") == name]
+
+class EmailDataClient(DataClient):
+    def __init__(self,output_dir:str):
+        super().__init__("email",output_dir=output_dir)
+
+    def add_email(self, student_id: str, role: str, content: StudentEmail, timestamp: Optional[str] = None):
+        """
+        新增邮件记录到某个学生的邮件历史文件中。
+        如果该学生没有历史记录，将创建新的文件。
+        """
+        if timestamp is None:
+            timestamp = datetime.datetime.now().isoformat()
+
+        try:
+            student_history = self.find(student_id)
+            if not student_history:
+                raise ValueError(f"Student with ID {student_id} not found.")
+        except ValueError as e:
+            student_history = {
+                "id": student_id,
+                "name": "Unknown",
+                "email": "unknown@example.com",
+                "history": []
+            }
+            raise e
+        student_history["history"].append({
+            "timestamp": timestamp,
+            "role": role,
+            "content": asdict(content) 
+        })
+
+        # 更新记录
+        self.update(student_id, student_history)
+
+    def append_email(self, student_id: str, email: StudentEmail):
+        """
+        将邮件添加到学生的邮件历史记录中。
+        """
+        self.add_email(student_id, ROLES_STUDENT, email)
+    def append_reply(self, student_id: str, email: StudentEmail):
+        """
+        将回复添加到学生的邮件历史记录中。
+        """
+        self.add_email(student_id, ROLES_WRITER, email)
+
+    def get_email_history(self, student_id: str) -> List[Dict[str, Any]]:
+        """
+        获取某个学生的所有邮件历史。
+        """
+        student_history = self.find(student_id)
+        return student_history.get("history", [])
+
+    def find_students_with_emails(self) -> List[Dict[str, Any]]:
+        """
+        返回所有有邮件历史的学生列表。
+        """
+        return [
+            {
+                "id": record["id"],
+                "name": record.get("name", ""),
+                "email": record.get("email", "")
+            }
+            for record in self.data if "history" in record and record["history"]
+        ]
+
+class ReferenceDataClient(DataClient):
+    def __init__(self):
+        super().__init__("reference", readonly=True)
+
+    def get_all_references(self) -> List[Dict[str, Any]]:
+        """获取所有参考文档"""
+        return self.find_all()
+
 def email_to_student(email: StudentEmail) -> Student:
     student = Student(
         id=str(uuid.uuid4()),
@@ -100,7 +168,6 @@ def email_to_student(email: StudentEmail) -> Student:
         university=email.sender['university'] # type: ignore
     )
     return student
-
-student_email_data_client = DataClient("student_email", readonly=False)
-student_data_client = DataClient("student", readonly=False) 
-reference_data_client = DataClient("reference", readonly=True)
+email_data_client = EmailDataClient("mails")
+student_data_client = StudentDataClient() 
+reference_data_client = ReferenceDataClient()
