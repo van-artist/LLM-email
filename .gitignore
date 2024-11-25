@@ -1,0 +1,8 @@
+# 忽略 Python 编译的文件
+__pycache__/
+*.pyc
+.env
+.vscode/
+.idea/
+.env
+data/

@@ -1,0 +1,47 @@
+2024-11-15 01:15:24,302 - INFO - --- Iteration 1 ---
+2024-11-15 01:15:24,302 - INFO - Successfully read email from /Users/apple/Projects/LLM-email/src/../data/mails/example.txt
+2024-11-15 01:15:24,302 - INFO - Step 1 completed: Email content loaded into shared pool.
+2024-11-15 01:15:24,303 - DEBUG - Generating email reply for: 主题: 关于贵校电子工程与人工智能方向博士项目的申请问题
+
+尊敬的李教授，
+
+您好！我是赵雪，目前在...
+2024-11-15 01:15:24,305 - DEBUG - Request options: {'method': 'post', 'url': '/chat/completions', 'files': None, 'json_data': {'messages': [{'role': 'system', 'content': '\n            请根据以下的求学邮件内容提取关键信息，并以如下的 JSON 格式输出，确保字段和结构保持一致：\n            {\n                "subject": "邮件主题",\n                "sender": {\n                    "name": "发件人姓名",\n                    "university": "发件人学校",\n                    "degree": "发件人学历/年级",\n                    "email": "发件人邮箱"\n                },\n                "application_intent": {\n                    "program": "申请的专业或项目",\n                    "interests": ["兴趣领域1", "兴趣领域2", ...]\n                },\n                "background": {\n                    "projects": [\n                        {\n                            "title": "项目名称",\n                            "results": "项目成果"\n                        }\n                    ],\n                    "courses": ["课程1", "课程2", ...]\n                },\n                "reason_for_applying": "申请理由",\n                "request": {\n                    "type": "请求类型（如建议或问题）",\n                    "appreciation": "感谢表达"\n                },\n                "closing": "结束语"\n            }\n            请按照上述结构生成 JSON 输出，不要包含额外的文本。\n            **特别注意**：\n            - 如果某些信息无法从邮件中提取，请填入 `null`。\n            - 如果邮件中没有明确的求学请求，`request` 字段应标记为 `null`。\n            - 如果邮件中未提到申请的背景或课程，也请填入 `null`。\n            - 请确保提取的字段准确无误，并保持 JSON 格式的规范。\n            - 保证数据字段的完整性，特别是 `sender`、`application_intent` 和 `request` 字段。\n            '}, {'role': 'user', 'content': '主题: 关于贵校电子工程与人工智能方向博士项目的申请问题\n\n尊敬的李教授，\n\n您好！我是赵雪，目前在北京大学电子工程专业攻读硕士学位，研究方向为信号处理与机器学习。了解到您在智能电网和物联网方面的深度研究，我希望能够申请贵校的博士项目，并有机会加入您的课题组，深入学习电子工程与人工智能的交叉领域。\n\n在过去的两年里，我参与了多个项目，其中几个重点项目如下：\n\n基于机器学习的电力负荷预测：在该项目中，我们使用了支持向量机和神经网络模型对电力负荷进行短期和长期的预测，以支持电力调度和分配。为了优化模型，我们分析了大量的历史负荷数据，并结合天气、节假日等多种因素进行建模。最终，我们开发的模型在预测准确率上大幅领先于传统方法。该项目最终的研究成果已经在国际会议上发表。\n\n物联网安全研究：在另一个项目中，我们分析了物联网设备的安全漏洞，尤其是对网络攻击的防范。项目的目标是开发一套入侵检测系统，通过分析网络流量，利用异常检测模型（如孤立森林和自编码器）来识别潜在的安全威胁。这一项目让我对物联网安全有了更深入的理解，并掌握了网络安全的基本工具和技术。\n\n高频信号处理：此外，我还参与了一个关于高频信号处理的项目。在该项目中，我们设计了一个高频信号检测系统，使用FFT（快速傅里叶变换）和自适应滤波器对信号进行实时处理。项目的挑战在于保证信号检测的实时性和高精度。我负责了信号处理算法的实现，并编写了相关的测试脚本。该项目帮助我熟悉了信号处理中的主流算法，并积累了大量编程经验。\n\n贵校的博士项目对我的学术成长至关重要。我希望能进一步提升自己的研究能力，并希望了解更多关于申请材料准备的具体要求，例如推荐信的数量、发表论文的要求等。感谢您抽出宝贵的时间阅读我的邮件，期待您的回复！\n\n此致敬礼，\n赵雪\n邮箱：xue.zhao@example.com\n\n'}], 'model': 'gpt-4o-mini'}}
+2024-11-15 01:15:24,324 - DEBUG - Sending HTTP Request: POST https://api.openai.com/v1/chat/completions
+2024-11-15 01:15:24,324 - DEBUG - connect_tcp.started host='127.0.0.1' port=7890 local_address=None timeout=5.0 socket_options=None
+2024-11-15 01:15:24,324 - DEBUG - connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x1625417b0>
+2024-11-15 01:15:24,324 - DEBUG - send_request_headers.started request=<Request [b'CONNECT']>
+2024-11-15 01:15:24,325 - DEBUG - send_request_headers.complete
+2024-11-15 01:15:24,325 - DEBUG - send_request_body.started request=<Request [b'CONNECT']>
+2024-11-15 01:15:24,325 - DEBUG - send_request_body.complete
+2024-11-15 01:15:24,325 - DEBUG - receive_response_headers.started request=<Request [b'CONNECT']>
+2024-11-15 01:15:24,325 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'Connection established', [])
+2024-11-15 01:15:24,325 - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x16238a1c0> server_hostname='api.openai.com' timeout=5.0
+2024-11-15 01:15:24,950 - DEBUG - start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x1625417e0>
+2024-11-15 01:15:24,950 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2024-11-15 01:15:24,951 - DEBUG - send_request_headers.complete
+2024-11-15 01:15:24,951 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2024-11-15 01:15:24,951 - DEBUG - send_request_body.complete
+2024-11-15 01:15:24,951 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2024-11-15 01:15:31,101 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Thu, 14 Nov 2024 17:15:31 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'access-control-expose-headers', b'X-Request-ID'), (b'openai-organization', b'user-p5jsutnjicugjjtmq59de0eo'), (b'openai-processing-ms', b'5433'), (b'openai-version', b'2020-10-01'), (b'x-ratelimit-limit-requests', b'10000'), (b'x-ratelimit-limit-tokens', b'200000'), (b'x-ratelimit-remaining-requests', b'9999'), (b'x-ratelimit-remaining-tokens', b'198963'), (b'x-ratelimit-reset-requests', b'8.64s'), (b'x-ratelimit-reset-tokens', b'310ms'), (b'x-request-id', b'req_adf33222e0b7cbbaae7f2e675ec8d728'), (b'strict-transport-security', b'max-age=31536000; includeSubDomains; preload'), (b'CF-Cache-Status', b'DYNAMIC'), (b'Set-Cookie', b'__cf_bm=UQYYnI3nhWiewz48FjFP0iANd6Cf2oZZrIuvcduAXhA-1731604531-1.0.1.1-6n5KRlW1jl5ipUahMYo6Sra_mUS2bbQdn8VshMxFTU3ZtUBom1oKP4Aj2z37_av9LUJp6OJggqjyqbEhcF5PjA; path=/; expires=Thu, 14-Nov-24 17:45:31 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None'), (b'X-Content-Type-Options', b'nosniff'), (b'Set-Cookie', b'_cfuvid=G14YABfxK.AN2YOIGpDNlVGqn8Kxku6WbgNo83JNDPM-1731604531127-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'CF-RAY', b'8e28a4ba3d091ec0-NRT'), (b'Content-Encoding', b'gzip'), (b'alt-svc', b'h3=":443"; ma=86400')])
+2024-11-15 01:15:31,105 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-11-15 01:15:31,108 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2024-11-15 01:15:31,108 - DEBUG - receive_response_body.complete
+2024-11-15 01:15:31,109 - DEBUG - response_closed.started
+2024-11-15 01:15:31,109 - DEBUG - response_closed.complete
+2024-11-15 01:15:31,109 - DEBUG - HTTP Response: POST https://api.openai.com/v1/chat/completions "200 OK" Headers([('date', 'Thu, 14 Nov 2024 17:15:31 GMT'), ('content-type', 'application/json'), ('transfer-encoding', 'chunked'), ('connection', 'keep-alive'), ('access-control-expose-headers', 'X-Request-ID'), ('openai-organization', 'user-p5jsutnjicugjjtmq59de0eo'), ('openai-processing-ms', '5433'), ('openai-version', '2020-10-01'), ('x-ratelimit-limit-requests', '10000'), ('x-ratelimit-limit-tokens', '200000'), ('x-ratelimit-remaining-requests', '9999'), ('x-ratelimit-remaining-tokens', '198963'), ('x-ratelimit-reset-requests', '8.64s'), ('x-ratelimit-reset-tokens', '310ms'), ('x-request-id', 'req_adf33222e0b7cbbaae7f2e675ec8d728'), ('strict-transport-security', 'max-age=31536000; includeSubDomains; preload'), ('cf-cache-status', 'DYNAMIC'), ('set-cookie', '__cf_bm=UQYYnI3nhWiewz48FjFP0iANd6Cf2oZZrIuvcduAXhA-1731604531-1.0.1.1-6n5KRlW1jl5ipUahMYo6Sra_mUS2bbQdn8VshMxFTU3ZtUBom1oKP4Aj2z37_av9LUJp6OJggqjyqbEhcF5PjA; path=/; expires=Thu, 14-Nov-24 17:45:31 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None'), ('x-content-type-options', 'nosniff'), ('set-cookie', '_cfuvid=G14YABfxK.AN2YOIGpDNlVGqn8Kxku6WbgNo83JNDPM-1731604531127-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None'), ('server', 'cloudflare'), ('cf-ray', '8e28a4ba3d091ec0-NRT'), ('content-encoding', 'gzip'), ('alt-svc', 'h3=":443"; ma=86400')])
+2024-11-15 01:15:31,110 - DEBUG - request_id: req_adf33222e0b7cbbaae7f2e675ec8d728
+2024-11-15 01:15:31,116 - INFO - Step 2 completed: Reader model generated the initial reply.
+2024-11-15 01:15:31,116 - INFO - Received reply from reader model: {
+    "subject": "关于贵校电子工程与人工智能方向博士项目的申请问题",
+    "sender": {
+        "name": "赵雪",
+        "universi...
+2024-11-15 01:15:31,116 - INFO - Processing student email and storing into database.
+2024-11-15 01:15:31,117 - INFO - Email stored successfully with ID: d97d3578-aaa5-4993-9a1f-263dd6aad4cc
+2024-11-15 01:15:31,118 - DEBUG - Retrieved email data: {'subject': '关于贵校电子工程与人工智能方向博士项目的申请问题', 'sender': {'name': '赵雪', 'university': '北京大学', 'degree': '硕士', 'email': 'xue.zhao@example.com'}, 'application_intent': {'program': '电子工程与人工智能方向博士项目', 'interests': ['信号处理', '机器学习']}, 'background': {'projects': [{'title': '基于机器学习的电力负荷预测', 'results': '开发的模型在预测准确率上大幅领先于传统方法，并在国际会议上发表'}, {'title': '物联网安全研究', 'results': '分析物联网设备的安全漏洞并开发入侵检测系统'}, {'title': '高频信号处理', 'results': '设计高频信号检测系统，熟悉信号处理中的主流算法'}], 'courses': None}, 'reason_for_applying': '贵校的博士项目对我的学术成长至关重要，想进一步提升自己的研究能力', 'request': {'type': '了解申请材料准备的具体要求', 'appreciation': '感谢您抽出宝贵的时间阅读我的邮件'}, 'closing': '期待您的回复！', 'id': 'd97d3578-aaa5-4993-9a1f-263dd6aad4cc'}
+2024-11-15 01:15:31,118 - ERROR - Error processing student email: 'dict' object has no attribute 'name'
+2024-11-15 01:15:31,118 - ERROR - Error in processing: 'dict' object has no attribute 'name'
+2024-11-15 01:15:31,118 - INFO - Max iterations reached. Exiting...
+2024-11-15 01:15:31,118 - INFO - Final Output (Writer's Reply):
+2024-11-15 01:15:31,118 - INFO - 
