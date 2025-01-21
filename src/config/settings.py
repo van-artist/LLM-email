@@ -1,5 +1,47 @@
 import os
 from dotenv import load_dotenv
+
+# 加载 .env 文件中的环境变量
+load_dotenv()
+
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY is required")
+
+HUGGINGFACE_TOKEN = os.getenv('HUGGINGFACE_TOKEN')
+if not HUGGINGFACE_TOKEN:
+    raise ValueError("HUGGINGFACE_TOKEN is required")
+
+EMAIL_USERNAME = os.getenv('EMAIL_USERNAME')
+if not EMAIL_USERNAME:
+    raise ValueError("EMAIL_USERNAME is required")
+
+EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
+if not EMAIL_PASSWORD:
+    raise ValueError("EMAIL_PASSWORD is required")
+
+POP_SERVER = os.getenv('POP_SERVER')
+if not POP_SERVER:
+    raise ValueError("POP_SERVER is required")
+
+POP_PORT = int(os.getenv('POP_PORT', 995))  # 如果 POP_PORT 不存在，则使用 995 作为默认端口
+
+IMAP_SERVER = os.getenv('IMAP_SERVER')
+if not IMAP_SERVER:
+    raise ValueError("IMAP_SERVER is required")
+
+IMAP_PORT = int(os.getenv('IMAP_PORT', 993))  # 如果 IMAP_PORT 不存在，则使用 993 作为默认端口
+
+SMTP_SERVER = os.getenv('SMTP_SERVER')
+if not SMTP_SERVER:
+    raise ValueError("SMTP_SERVER is required")
+
+SMTP_PORT = int(os.getenv('SMTP_PORT', 587))  # 如果 SMTP_PORT 不存在，则使用 587 作为默认端口
+
+GMAIL_PASSWORD = os.getenv('GMAIL_PASSWORD')
+if not GMAIL_PASSWORD:
+    raise ValueError("GMAIL_PASSWORD is required")
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, '../data')
 
