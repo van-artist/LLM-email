@@ -1,6 +1,5 @@
 import os
 
-
 # MODEL_NAME = "meta-llama/Llama-3.2-1B"
 LENGTH_MAX_GENERATION = 50
 NUM_RETURN_SEQUENCES = 1
