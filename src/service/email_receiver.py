@@ -1,5 +1,4 @@
 import imaplib
-import email.message
 from email.parser import BytesParser
 from email import policy
 import os
