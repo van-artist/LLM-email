@@ -16,6 +16,9 @@ class EmailReceiver:
         """连接到IMAP服务器"""
         try:
             self.connection = imaplib.IMAP4_SSL(self.server, self.port)
+            print(f"Connected to IMAP server {self.server}")
+            print(f"Logging in as {self.username}...")
+            print(f"Logging in with password: {self.password}...")
             self.connection.login(self.username, self.password)
             self.connection.select("inbox", readonly=True)
         except Exception as e:
