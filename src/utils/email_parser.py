@@ -5,6 +5,7 @@ from email.utils import parsedate_to_datetime
 from bs4 import BeautifulSoup
 import base64
 from urllib.parse import unquote
+import html
 
 
 def parse_email(file_path: str) -> dict:
@@ -286,3 +287,33 @@ def extract_body_text(msg) -> str:
         else:
             return ""
 
+def handle_email_body(raw_body: str) -> str:
+    """
+    处理邮件正文，将 HTML 解码为纯文本，并处理 Unicode 转义字符。
+
+    Args:
+        raw_body (str): 未解码的邮件正文字符串。
+
+    Returns:
+        str: 解码后的纯文本正文。
+    """
+    if not raw_body:
+        return ""
+
+    try:
+        # 尝试将 HTML 解码为纯文本
+        if "<html>" in raw_body.lower() or "<body>" in raw_body.lower():
+            soup = BeautifulSoup(raw_body, "html.parser")
+            text = soup.get_text(separator="\n", strip=True)
+        else:
+            # 直接处理非 HTML 的 Unicode 转义字符
+            text = html.unescape(raw_body)
+
+        # 最后一步：处理转义的 Unicode 字符
+        text = text.encode('utf-8').decode('unicode_escape')
+        return text.strip()
+    except Exception as e:
+        print(f"Error decoding email body: {e}")
+        # 如果解析失败，返回原始内容
+        return raw_body
+    
