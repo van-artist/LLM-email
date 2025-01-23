@@ -3,6 +3,8 @@ from email.parser import Parser
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
 from bs4 import BeautifulSoup
+import base64
+from urllib.parse import unquote
 
 
 def parse_email(file_path: str) -> dict:
@@ -10,18 +12,24 @@ def parse_email(file_path: str) -> dict:
     从一个 .txt 文件中解析邮件，返回结构化内容，包括修复多行头部和多余的空行。
     """
     # 1) 读取原始文件并修复多行头部
-    fixed_text = fix_multiline_headers(file_path)
-    # print("Fixed text:", fixed_text)
+    # fixed_text = fix_multiline_headers(file_path)
+    content=""
+    with open(file_path, "r", encoding="utf-8") as f:
+        content = f.read()
     # 2) 用 Parser 解析修复后的邮件文本
-    msg = Parser().parsestr(fixed_text)
-
+    msg = Parser().parsestr(content)
+    # print("msg: ", msg)
     # 3) 解析各常见头部并解码
-    subject = decode_mime_str(msg.get('Subject', ''))
+    tmp_subject_str=msg.get('Subject', '')
+    tmp_subject_str=tmp_subject_str.replace("\n", "").replace("\t", "")
+    print("tmp_subject_str: ", tmp_subject_str)
+    print("tmp_str: ", tmp_subject_str.replace("\n","").strip())
+    subject = decode_mime_str(tmp_subject_str)
+    print("subject: ", subject)
     from_ = decode_mime_str(msg.get('From', ''))
     to_ = decode_mime_str(msg.get('To', ''))
     date_str = msg.get('Date', '')
     date_parsed = None
-    print("subject:", subject)
     try:
         date_parsed = parsedate_to_datetime(date_str)
     except:
@@ -42,68 +50,45 @@ def parse_email(file_path: str) -> dict:
 
 def fix_multiline_headers(file_path: str) -> str:
     """
-    读取原始邮件文件，对头部区域(遇到空行前)做修复。
-    - 尽量跳过/合并头部区域内的“意外空行”，防止 Subject 等多行中断。
-    - 如果判定空行确实是头部结束，则进入正文。
-    - 合并多行头部（缺少前置空格的 continuation）。
+    修复邮件头部，确保多行字段正确拼接，空行和空格处理符合规范。
     """
-
-    with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+    head_lines = []
+    fixed_lines = []
+    subject_line_str=""
+    with open(file_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
+    
+    
+    exit=False
+    for line in lines:
+        if exit:
+            break
+        if "Date:" in line:
+            exit=True
+        head_lines.append(line)
+    
+    print("head_lines: ", head_lines)
 
-    fixed_lines: list[str] = []
-    in_header = True
+    subject_lines_count=0
 
-    # 用下标遍历，以便在检测到空行时可以查看“下一行”是否可能是头部延续。
-    i = 0
-    while i < len(lines):
-        line = lines[i]
+    for line in head_lines:
+        if "From:" in line:
+            break
+        else :
+            tmp_line = line.strip()
+            subject_line_str+=tmp_line
+        subject_lines_count+=1
+    print("subject_line_str: ", subject_line_str)
+    print("subject_lines_count: ", subject_lines_count)
 
-        if in_header:
-            # 如果这行是空行或只含空白
-            if not line.strip():
-                # 可能是头部结束，也可能是意外的空行
-                # 查看下一行，若下一行仍然看似头部行或 continuation，则跳过该空行
-                if i + 1 < len(lines):
-                    next_line = lines[i + 1]
-                    if is_header_line(next_line) or is_continuation_line(next_line, fixed_lines):
-                        # “意外空行”，跳过，不结束头部
-                        i += 1
-                        continue
-                    else:
-                        # 下一行也不是头部 => 这是真正的分隔行
-                        fixed_lines.append(line)  # 保留这个空行，标记头部结束
-                        in_header = False
-                        i += 1
-                        continue
-                else:
-                    # 已无下一行，算头部结束
-                    fixed_lines.append(line)
-                    in_header = False
-                    i += 1
-                    continue
 
-            else:
-                # 当前行非空，判断是新的头部行还是 continuation
-                if is_header_line(line):
-                    # 有效的新头部行 (例如 "Subject: ...", "From: ...")
-                    fixed_lines.append(line)
-                else:
-                    # continuation (上一行是头部，则拼接)
-                    if fixed_lines and ":" in fixed_lines[-1]:
-                        # 拼接到上一行
-                        fixed_lines[-1] = fixed_lines[-1].rstrip("\r\n") + " " + line.strip("\r\n")
-                    else:
-                        # 理论上极少出现，但万一上一行也不是头部，就只能新加一行
-                        fixed_lines.append(line)
-            i += 1
-        else:
-            # 已经进入正文区域，原样保留
-            fixed_lines.append(line)
-            i += 1
 
-    return "".join(fixed_lines)
+            
 
+    # 修复多余的空行
+    fixed_lines = [line for line in fixed_lines if line]
+
+    return "\n".join(fixed_lines)
 
 def is_header_line(line: str) -> bool:
     """
@@ -136,29 +121,128 @@ def is_continuation_line(line: str, fixed_lines: list[str]) -> bool:
         # 这行含有冒号 => 很可能是新的头部行，而不是 continuation
         return False
 
-def decode_mime_str(raw_header: str) -> str:
+def decode_mime_str(header_str: str) -> str:
     """
-    使用 decode_header 对 MIME 编码字符串做解码，并且对错误的 Base64/QP 编码进行宽容处理。
+    强行解码不规范的 MIME 字段。支持 B (Base64) 和 Q (Quoted-Printable)。
+    1) 首先拼接所有多行，并去掉行首空白 (例如 \t)。
+    2) 根据 =?xxx?B? 或 =?xxx?Q? 拆分各个段，分别解码。
+    3) 如果仍然失败，就原样返回。
     """
-    if not raw_header:
+    if not header_str:
         return ""
-    try:
-        parts = decode_header(raw_header)
-    except Exception:
-        return raw_header
 
-    decoded_string = ""
-    for part, enc in parts:
-        if isinstance(part, bytes):
-            if not enc:
-                enc = 'ascii'
-            try:
-                decoded_string += part.decode(enc, errors='replace')
-            except:
-                decoded_string += part.decode('utf-8', errors='replace')
+    # 1) 先把换行符和制表符去掉，拼成一行
+    fixed_str = re.sub(r'\s+', ' ', header_str).strip()
+
+    # 2) 用正则把所有 MIME 段分割出来
+    #    形如 =?charset?B?xxx?= 或 =?charset?Q?xxx?=
+    pattern = re.compile(r'(\=\?[^\?]+\?[BQbq]\?[^\?]+\?\=)')
+    segments = pattern.split(fixed_str)
+
+    decoded_segments = []
+    for seg in segments:
+        seg = seg.strip()
+        if not seg:
+            continue
+
+        if pattern.match(seg):
+            # MIME 段 (=?charset?B?xxxx?= 或 =?charset?Q?xxxx?=)
+            decoded = _decode_one_mime_segment(seg)
+            decoded_segments.append(decoded)
         else:
-            decoded_string += part
-    return decoded_string
+            # 普通字符串
+            decoded_segments.append(seg)
+
+    return "".join(decoded_segments).strip()
+
+def _decode_one_mime_segment(segment: str) -> str:
+    """
+    解码单个 MIME 段，支持 B / Q 编码。
+    格式: =?charset?B?xxxx?= 或 =?charset?Q?xxxx?=
+    """
+    match = re.match(r'=\?([^?]+)\?([BQbq])\?([^?]+)\?=', segment, flags=re.IGNORECASE)
+    if not match:
+        return segment  # 不符合预期的就原样返回
+
+    charset = match.group(1)
+    encoding_flag = match.group(2).upper()  # B or Q
+    encoded_data = match.group(3).strip()
+
+    if encoding_flag == 'B':
+        return _bruteforce_decode_b64(charset, encoded_data, segment)
+    else:
+        # Q 编码
+        return _decode_qp(charset, encoded_data)
+
+def _bruteforce_decode_b64(charset: str, b64_data: str, original_segment: str) -> str:
+    """
+    处理 B (Base64) 编码的尝试修复解码。
+    """
+    tries = [
+        (b64_data, "原样"),
+        (b64_data.replace('_', '/'), "下划线 -> /"),
+        (b64_data.replace('_', '+'), "下划线 -> +"),
+    ]
+    for data_fix, desc in tries:
+        fixed_data = _fix_base64_padding(data_fix)
+        try:
+            raw = base64.b64decode(fixed_data, validate=False)
+            try:
+                return raw.decode(charset, errors='replace')
+            except:
+                return raw.decode('utf-8', errors='replace')
+        except:
+            # 下一个尝试
+            pass
+    # 所有都失败
+    return original_segment
+
+def _decode_qp(charset: str, qp_data: str) -> str:
+    """
+    解码 Q (Quoted-Printable) 编码的字符串。
+    注意: 在 Q 编码中, '_' 代表空格, 而 =xx 为十六进制转义。
+    """
+    # 先把 '_' 替换成 ' ' (空格)
+    qp_data = qp_data.replace('_', ' ')
+    # 把 =XX 转成相应字节
+    # 可以借助 Python 标准库 quopri, 但这里我们用 urllib.parse.unquote_to_bytes
+    # 需要先把每个 =xx 转换成 %xx
+    qp_data = re.sub(r'=([0-9A-Fa-f]{2})', r'%\1', qp_data)
+    raw = unquote(qp_data)
+    try:
+        return raw.encode('latin-1', errors='replace').decode(charset, errors='replace')
+    except:
+        # 若 charset 不行, 再试 utf-8
+        return raw.encode('latin-1', errors='replace').decode('utf-8', errors='replace')
+
+def _fix_base64_padding(b64_str: str) -> str:
+    """
+    若长度不是4的倍数，则补 '='
+    """
+    missing = len(b64_str) % 4
+    if missing:
+        b64_str += "=" * (4 - missing)
+    return b64_str
+
+
+def fix_base64_padding(header: str) -> str:
+    """
+    修复 Base64 编码部分的填充问题。
+    """
+    def fix_segment(segment: str) -> str:
+        # 判断是否是 Base64 编码的部分
+        if "?B?" in segment:
+            base64_part = segment.split("?B?")[-1].split("?=")[0]
+            # 补齐 Base64 编码的填充
+            missing_padding = len(base64_part) % 4
+            if missing_padding:  # 计算需要补充的填充字符数量
+                base64_part += "=" * (4 - missing_padding)
+            return segment.replace(segment.split("?B?")[-1].split("?=")[0], base64_part)
+        return segment
+
+    # 使用正则分割出 MIME 编码段落
+    segments = re.split(r'(\=\?[^\?]+\?[BQ]\?[^\?]+\?\=)', header)
+    return "".join(fix_segment(segment) for segment in segments if segment)
 
 
 def extract_body_text(msg) -> str:

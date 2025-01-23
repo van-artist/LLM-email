@@ -7,7 +7,6 @@ MONGGODB_URL="mongodb://localhost:27017/"
 
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-print(OPENAI_API_KEY)
 
 # 模型相关配置
 MODEL_CONFIG = {
