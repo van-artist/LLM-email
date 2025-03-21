@@ -1,4 +1,3 @@
-import os
 import mailparser
 import base64
 import quopri
@@ -48,53 +47,58 @@ def get_decoded_payload(part):
             return payload.decode('utf-8', errors='ignore')
 
 def parse_eml_file(file_path):
-    """完整解析 .eml 文件，确保提取所有正文和附件信息"""
+    """完整解析 .eml 文件，确保提取正文、附件、并妥善处理内联资源"""
     try:
         mail = mailparser.parse_from_file(file_path)
 
-        # 获取邮件基本信息（含解码）
         subject = decode_mime_words(mail.subject) if mail.subject else "No Subject"
         from_email = decode_mime_words(mail.from_[0][1]) if mail.from_ else "Unknown"
         to_email = decode_mime_words(mail.to[0][1]) if mail.to else "Unknown"
         date = str(mail.date) if mail.date else "Unknown Date"
-
-        # 获取原始邮件头部
         headers = mail.headers
 
-        # 解析正文内容：遍历所有 MIME 部分
         text_body = ""
         html_body = ""
-
-        for part in mail.message.walk():
-            content_type = part.get_content_type()
-            decoded_content = get_decoded_payload(part)
-
-            if content_type == "text/plain":
-                text_body += decoded_content.strip() + "\n"
-            elif content_type == "text/html":
-                html_body += decoded_content.strip() + "\n"
-
-        # fallback: 如果 text_body 为空，则从 HTML 中提取纯文本
-        if not text_body and html_body:
-            soup = BeautifulSoup(html_body, "html.parser")
-            text_body = soup.get_text(separator="\n").strip()
-
-        # 解析附件信息（解码附件文件名）
         attachments = []
-        for part in mail.message.walk():
-            content_disposition = part.get("Content-Disposition", "")
-            if "attachment" in content_disposition.lower():
+
+        if mail.message:
+            for part in mail.message.walk():
+                content_type = part.get_content_type()
+                content_disposition = part.get("Content-Disposition", "") or ""
+                content_id = part.get("Content-ID", "")
                 filename = part.get_filename()
-                if filename:
-                    decoded_filename = decode_mime_words(filename)
+
+                # 内联图像或内嵌资源（例如：cid:xxx 引用），处理为附件，不放正文
+                is_inline_attachment = (
+                    "inline" in content_disposition.lower()
+                    or content_id
+                ) and filename and content_type.startswith("image/")
+
+                # 真正的正文
+                if content_type in ["text/plain", "text/html"] and not is_inline_attachment:
+                    decoded_content = get_decoded_payload(part)
+                    if content_type == "text/plain":
+                        text_body += decoded_content.strip() + "\n"
+                    elif content_type == "text/html":
+                        html_body += decoded_content.strip() + "\n"
+                    continue
+
+                # 附件或内联资源（都保存到 attachments）
+                if "attachment" in content_disposition.lower() or is_inline_attachment:
+                    decoded_filename = decode_mime_words(filename) if filename else "unnamed"
                     payload = part.get_payload(decode=True)
                     mime_type = part.get_content_type()
                     attachments.append({
                         "filename": decoded_filename,
                         "size": len(payload) if payload else 0,
                         "mime_type": mime_type,
-                        "disposition": content_disposition.strip()
+                        "disposition": content_disposition.strip() or "inline",
+                        "is_inline": is_inline_attachment
                     })
+
+        if not text_body and html_body:
+            soup = BeautifulSoup(html_body, "html.parser")
+            text_body = soup.get_text(separator="\n").strip()
 
         return {
             "subject": subject,
@@ -109,6 +113,7 @@ def parse_eml_file(file_path):
     except Exception as e:
         print(f"Error parsing {file_path}: {e}")
         return None
+
 
 def save_parsed_email(email_data, output_path):
     """存储解析后的邮件内容（包括完整邮件头部和详细附件信息）"""
