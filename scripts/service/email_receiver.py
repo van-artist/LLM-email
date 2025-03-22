@@ -1,6 +1,6 @@
 import imaplib
 import os
-from email.parser import BytesParser
+from email.parser import BytesParser, Parser
 from email.header import decode_header
 from email.policy import default
 
@@ -44,7 +44,7 @@ class EmailReceiver:
     def parse_email(self, raw_email):
         """将原始邮件数据解析为email.message.Message对象"""
         try:
-            email_message = BytesParser(policy=default).parsebytes(raw_email)
+            email_message = BytesParser().parsebytes(raw_email)
             return email_message
         except Exception as e:
             print(f"Error parsing email: {e}")
@@ -103,7 +103,10 @@ class EmailReceiver:
                         if attachment_data:
                             attachment_path = os.path.join(email_folder, filename)
                             with open(attachment_path, "wb") as af:
-                                af.write(attachment_data)
+                                if isinstance(attachment_data, (bytes, bytearray)):
+                                    af.write(attachment_data)
+                                else:
+                                    print(f"Attachment data for '{filename}' is not in a writable format.")
                             print(f"Attachment '{filename}' saved to {attachment_path}")
 
     def fetch_all_email_ids(self):

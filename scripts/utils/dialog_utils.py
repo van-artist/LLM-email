@@ -1,3 +1,5 @@
+#type:ignore
+
 from __future__ import annotations
 import re
 import base64
@@ -42,6 +44,7 @@ class EmailTurn:
     def __repr__(self) -> str:
         return f"EmailTurn(role={self.role}, content_len={len(self.content)}, attachments={len(self.attachments)})"
 
+
 # 编码处理函数
 def decode_base64(content: str, charset: str = 'utf-8') -> str:
     """解码 base64 编码的内容"""
@@ -83,6 +86,7 @@ def get_decoded_payload(part: Any) -> str:
             return payload.decode('gbk', errors='ignore')
         except Exception:
             return payload.decode('utf-8', errors='ignore')
+
 
 # 分割嵌套回复部分
 def split_by_reply_markers(text: str) -> List[str]:
@@ -126,6 +130,7 @@ def extract_email_dialog(email_data: Dict[str, Any]) -> List[Dict[str, Union[str
 
     if len(chunks) <= 1:
         content_text: str = raw_text
+        # 如果正文为空但存在附件，则将附件名称作为补充内容
         if not content_text and all_attachments:
             attachment_names = normalize_attachments(all_attachments)
             content_text = "(附件: " + ", ".join(attachment_names) + ")"
@@ -140,3 +145,32 @@ def extract_email_dialog(email_data: Dict[str, Any]) -> List[Dict[str, Union[str
             dialog[0].attachments = normalize_attachments(all_attachments)
 
     return [turn.to_dict() for turn in dialog]
+
+PAT_REMOVE_CN_EMAIL = re.compile(r"(?i)请使用中文邮箱第一品牌.*", flags=re.DOTALL)
+
+def remove_ads_from_dialog(dialog: List[Dict], patterns: Optional[List[str]] = None) -> List[Dict]:
+    """
+    直接把从“请使用中文邮箱第一品牌”开始到文本末尾的所有内容删掉
+    """
+    if patterns is None:
+        patterns = [
+            r"(?i)请点击.*?进入",
+            r"(?i)查看原文",
+            r"(?i)来自.*?邮件服务商",
+            r"(?i)广告.*",
+            r"(?i)推荐阅读.*",
+            # 这条最关键：
+            r"(?s)(?i)请使用中文邮箱第一品牌.*"   # 从出现“请使用中文邮箱第一品牌”起，删除后续所有文字
+        ]
+    
+    new_dialog = []
+    for turn in dialog:
+        content = turn.get("content", "")
+        for pat in patterns:
+            content = re.sub(pat, "", content, flags=re.DOTALL | re.IGNORECASE)
+        # 合并空白
+        content = re.sub(r"\s+", " ", content).strip()
+        new_turn = turn.copy()
+        new_turn["content"] = content
+        new_dialog.append(new_turn)
+    return new_dialog

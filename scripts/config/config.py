@@ -17,7 +17,13 @@ class Config:
         self.SMTP_SERVER = self._get_required_env('SMTP_SERVER')
         self.SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
         self.GMAIL_PASSWORD = self._get_required_env('GMAIL_PASSWORD')
-        dirs= self._get_dirs()
+
+        # Ollama 配置项
+        self.OLLAMA_URL = self._get_required_env('OLLAMA_URL')
+        self.OLLAMA_MODEL = "deepseek-r1:1.5b"
+
+        # 目录结构
+        dirs = self._get_dirs()
         self.BASE_DIR = dirs[0]
         self.SRC_DIR = dirs[1]
         self.PROJECT_ROOT = dirs[2]
@@ -41,3 +47,4 @@ class Config:
     
 config = Config()
 
+print(config)

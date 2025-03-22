@@ -1,3 +1,4 @@
+#type:ignore
 import mailparser
 import base64
 import quopri

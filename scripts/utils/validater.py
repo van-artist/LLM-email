@@ -1,3 +1,4 @@
+#type:ignore
 from jsonschema import validate, ValidationError
 
 student_email_schema = {
