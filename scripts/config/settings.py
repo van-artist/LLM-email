@@ -1,7 +1,4 @@
 import os
-from dotenv import load_dotenv
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(BASE_DIR, '../data')
 
 # MODEL_NAME = "meta-llama/Llama-3.2-1B"
 LENGTH_MAX_GENERATION = 50
@@ -9,14 +6,7 @@ NUM_RETURN_SEQUENCES = 1
 MONGGODB_URL="mongodb://localhost:27017/"
 
 
-load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-print(OPENAI_API_KEY)
-ROLES_READER="reader"
-ROLES_WRITER="writer"
-ROLES_CHECKER="checker"
-ROLES_STUDENT="student"
-ROLES_ADMIN="admin"
 # 模型相关配置
 MODEL_CONFIG = {
     'model_name': 'meta-llama/Llama-3.2-3B',
